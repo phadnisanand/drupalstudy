@@ -1,0 +1,9 @@
+name: 'Workbench Moderate -> Content Moderation Migrator'
+description: 'Migrate moderation states and revisions from Workbench Moderation to Content Moderation (Drupal core workflow).'
+core_version_requirement: ^10
+type: module
+package: Migration
+version: 1.0
+dependencies:
+  - content_moderation
+  - workflow
