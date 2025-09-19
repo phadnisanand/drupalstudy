@@ -1,0 +1,6 @@
+services:
+  migrate_wbm.commands:
+    class: Drupal\migrate_wbm\Commands\MigrateWbmCommands
+    arguments: ['@entity_type.manager', '@config.factory', '@logger.factory']
+    tags:
+      - { name: drush.command }

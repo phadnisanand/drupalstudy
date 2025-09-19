@@ -1,0 +1,8 @@
+name: Migrate Workbench Moderation
+type: module
+description: 'Migrate Workbench Moderation & Workbench Email to Content Moderation.'
+core_version_requirement: ^10 || ^11
+package: Custom
+dependencies:
+  - drupal:content_moderation
+  - drupal:content_moderation_notifications

@@ -1,0 +1,4 @@
+services:
+  migrate_wbm.service:
+    class: Drupal\migrate_wbm\Service\Dummy
+    arguments: []

@@ -1,0 +1,121 @@
+<?php
+
+namespace Drupal\migrate_workbench\Commands;
+
+use Drush\Commands\DrushCommands;
+use Drupal\workflows\Entity\Workflow;
+use Drupal\node\Entity\Node;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Database\Connection;
+
+/**
+ * Drush command to migrate Workbench Moderation -> Content Moderation.
+ */
+class WbFullMigrateCommands extends DrushCommands {
+
+  protected $entityTypeManager;
+  protected $database;
+
+  public function __construct(EntityTypeManagerInterface $entityTypeManager, Connection $database) {
+    parent::__construct();
+    $this->entityTypeManager = $entityTypeManager;
+    $this->database = $database;
+  }
+
+  /**
+   * Full migration: workflows + revision states.
+   *
+   * @command migrate:wb-full
+   * @aliases wb-full
+   */
+  public function migrateWorkbenchToCM() {
+    // --- STEP 1: Migrate workflows ---
+    $configs = \Drupal::configFactory()->listAll('workbench_moderation.moderation_workflow.');
+
+    foreach ($configs as $config_name) {
+      $config = \Drupal::config($config_name);
+      $workflow_id = $config->get('id');
+      $workflow_label = $config->get('label');
+
+      if (Workflow::load($workflow_id)) {
+        $this->logger()->notice("Workflow {$workflow_id} already exists, skipping.");
+        continue;
+      }
+
+      $workflow = Workflow::create([
+        'id' => $workflow_id,
+        'label' => $workflow_label,
+        'type' => 'content_moderation',
+      ]);
+
+      // Add states.
+      foreach ($config->get('states') as $state_id => $state) {
+        $workflow->getTypePlugin()->addState($state_id, [
+          'label' => $state['label'],
+          'published' => !empty($state['published']),
+          'default_revision' => !empty($state['default_revision']),
+        ]);
+      }
+
+      // Add transitions.
+      foreach ($config->get('transitions') as $transition_id => $transition) {
+        $workflow->getTypePlugin()->addTransition($transition_id, [
+          'label' => $transition['label'],
+          'from' => $transition['from'],
+          'to' => $transition['to'],
+        ]);
+      }
+
+      // Assign to bundles.
+      foreach ($config->get('bundles') as $entity_type => $bundles) {
+        foreach ($bundles as $bundle) {
+          $workflow->getTypePlugin()->addEntityTypeAndBundle($entity_type, $bundle);
+        }
+      }
+
+      $workflow->save();
+      $this->logger()->success("Created Content Moderation workflow: {$workflow_id}");
+    }
+
+    // --- STEP 2: Migrate revision states ---
+    // Simple mapping, extend if you had custom states.
+    $map = [
+      'draft' => 'draft',
+      'needs_review' => 'needs_review',
+      'published' => 'published',
+      'archived' => 'archived',
+    ];
+
+    $nids = $this->database->select('node_field_data', 'n')
+      ->fields('n', ['nid'])
+      ->execute()
+      ->fetchCol();
+
+    $count = 0;
+    foreach ($nids as $nid) {
+      $node = Node::load($nid);
+      if (!$node) {
+        continue;
+      }
+
+      foreach ($node->getRevisionIds() as $vid) {
+        $revision = $this->entityTypeManager
+          ->getStorage('node')
+          ->loadRevision($vid);
+
+        if ($revision && $revision->hasField('moderation_state')) {
+          $old_state = $revision->get('moderation_state')->value;
+
+          if (isset($map[$old_state])) {
+            $new_state = $map[$old_state];
+            $revision->set('moderation_state', $new_state);
+            $revision->save();
+            $count++;
+          }
+        }
+      }
+    }
+
+    $this->logger()->success("Migrated {$count} revision states to Content Moderation.");
+  }
+}

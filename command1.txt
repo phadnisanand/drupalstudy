@@ -1,0 +1,66 @@
+<?php
+// migrate_workbench/src/Commands/WbWorkflowMigrateCommands.php
+namespace Drupal\migrate_workbench\Commands;
+
+use Drush\Commands\DrushCommands;
+use Drupal\workflows\Entity\Workflow;
+
+class WbWorkflowMigrateCommands extends DrushCommands {
+
+  /**
+   * Migrate Workbench Moderation workflow(s) to Content Moderation.
+   *
+   * @command migrate:wb-workflows
+   * @aliases wb-workflows
+   */
+  public function migrateWorkflows() {
+    // Load Workbench workflows.
+    $configs = \Drupal::configFactory()->listAll('workbench_moderation.moderation_workflow.');
+
+    foreach ($configs as $config_name) {
+      $config = \Drupal::config($config_name);
+      $workflow_id = $config->get('id');
+      $workflow_label = $config->get('label');
+
+      // Create a Content Moderation workflow.
+      if (Workflow::load($workflow_id)) {
+        $this->logger()->notice("Workflow {$workflow_id} already exists, skipping.");
+        continue;
+      }
+
+      $workflow = Workflow::create([
+        'id' => $workflow_id,
+        'label' => $workflow_label,
+        'type' => 'content_moderation',
+      ]);
+
+      // Add states.
+      foreach ($config->get('states') as $state_id => $state) {
+        $workflow->getTypePlugin()->addState($state_id, [
+          'label' => $state['label'],
+          'published' => !empty($state['published']),
+          'default_revision' => !empty($state['default_revision']),
+        ]);
+      }
+
+      // Add transitions.
+      foreach ($config->get('transitions') as $transition_id => $transition) {
+        $workflow->getTypePlugin()->addTransition($transition_id, [
+          'label' => $transition['label'],
+          'from' => $transition['from'],
+          'to' => $transition['to'],
+        ]);
+      }
+
+      // Assign to bundles (content types).
+      foreach ($config->get('bundles') as $entity_type => $bundles) {
+        foreach ($bundles as $bundle) {
+          $workflow->getTypePlugin()->addEntityTypeAndBundle($entity_type, $bundle);
+        }
+      }
+
+      $workflow->save();
+      $this->logger()->success("Created Content Moderation workflow: {$workflow_id}");
+    }
+  }
+}
