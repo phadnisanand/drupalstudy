@@ -1,0 +1,6 @@
+services:
+  wbm_to_cm_migrator.commands:
+    class: Drupal\wbm_to_cm_migrator\Commands\MigrateWbmCommands
+    arguments: ['@entity_type.manager', '@config.factory', '@logger.factory']
+    tags:
+      - { name: drush.command }

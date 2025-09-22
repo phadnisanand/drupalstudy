@@ -1,0 +1,116 @@
+<?php
+
+use Drupal\Core\Database\Database;
+use Drupal\node\Entity\Node;
+use Drupal\workflows\Entity\Workflow;
+
+/**
+ * Post update hook: migrate Workbench Moderation states to Content Moderation.
+ */
+function wbm_to_cm_migrator_post_update_migrate_workbench_moderation(array &$sandbox) {  die('coming 1');
+  $connection = Database::getConnection();
+
+  $state_map = [
+    'draft' => 'draft',
+    'needs_review' => 'needs_review',
+    'needs_review_revision' => 'needs_review',
+    'published' => 'published',
+    'archived' => 'archived',
+  ];
+
+  $workflow_id = 'wbm_migrated_workflow';
+  if (!\Drupal::entityTypeManager()->getStorage('workflow')->load($workflow_id)) {
+    $workflow = Workflow::create([
+      'id' => $workflow_id,
+      'label' => 'Migrated Workbench Workflow',
+      'type' => 'content_moderation',
+    ]);
+    $workflow->save();
+  }
+
+  if (!$connection->schema()->tableExists('workbench_moderation_state')) {
+    \Drupal::logger('wbm_to_cm_migrator')->warning('workbench_moderation_state table not found. Nothing to migrate.');
+    return;
+  }
+
+  $query = $connection->select('workbench_moderation_state', 'w')
+    ->fields('w', ['entity_type', 'entity_id', 'revision_id', 'moderation_state']);
+  $results = $query->execute();
+
+  $node_storage = \Drupal::entityTypeManager()->getStorage('node');
+  $count = 0;
+
+  foreach ($results as $row) {
+    if ($row->entity_type !== 'node') {
+      continue;
+    }
+    $old_state = (string) $row->moderation_state;
+    $new_state = $state_map[$old_state] ?? 'draft';
+
+    try {
+      if (!empty($row->revision_id)) {
+        $revision = $node_storage->loadRevision($row->revision_id);
+        if ($revision && $revision->hasField('moderation_state')) {
+          $revision->set('moderation_state', $new_state);
+          $revision->save();
+          $count++;
+          continue;
+        }
+      }
+      $node = $node_storage->load($row->entity_id);
+      if ($node && $node->hasField('moderation_state')) {
+        $node->set('moderation_state', $new_state);
+        $node->save();
+        $count++;
+      }
+    } catch (\Exception $e) {
+      \Drupal::logger('wbm_to_cm_migrator')->error('Error migrating node @nid rev @rid: @msg', [
+        '@nid' => $row->entity_id,
+        '@rid' => $row->revision_id,
+        '@msg' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  \Drupal::logger('wbm_to_cm_migrator')->notice('Migration completed. Migrated @count node revisions.', ['@count' => $count]);
+}
+
+/**
+ * Post update hook: migrate Workbench Email configs to Content Moderation Notifications.
+ */
+function wbm_to_cm_migrator_post_update_migrate_workbench_email(array &$sandbox) {  die('coming 2');
+  $config_storage = \Drupal::service('config.storage');
+  $old_configs = $config_storage->listAll('workbench_email.workbench_email.');
+
+  if (empty($old_configs)) {
+    \Drupal::logger('wbm_to_cm_migrator')->notice('No Workbench Email configs found to migrate.');
+    return;
+  }
+
+  foreach ($old_configs as $old_config_name) {
+    $old_config = $config_storage->read($old_config_name);
+    if (!$old_config) {
+      continue;
+    }
+
+    $new_id = str_replace('workbench_email.', 'wbm_to_cm_', $old_config['id']);
+    $new_config_name = 'content_moderation_notifications.notification.' . $new_id;
+
+    $new_config = [
+      'id' => $new_id,
+      'label' => $old_config['label'] ?? 'Migrated notification',
+      'workflow' => 'wbm_migrated_workflow',
+      'state_from' => $old_config['state_from'] ?? '',
+      'state_to' => $old_config['state_to'] ?? '',
+      'recipients' => $old_config['recipients'] ?? [],
+      'subject' => $old_config['subject'] ?? 'Content state changed',
+      'body' => $old_config['body'] ?? 'Content [node:title] has changed state.',
+    ];
+
+    $config_storage->write($new_config_name, $new_config);
+    \Drupal::logger('wbm_to_cm_migrator')->notice('Migrated Workbench Email config @old to Content Moderation Notification @new.', [
+      '@old' => $old_config_name,
+      '@new' => $new_config_name,
+    ]);
+  }
+}
