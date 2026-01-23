@@ -9,3 +9,7 @@ https://www.drupal.org/project/field_encrypt
 https://www.drupal.org/project/hacked
 https://www.youtube.com/watch?v=XNz3KpNtjUk
 https://www.drupal.org/project/seckit
+
+File permissons and ownership scipts need to run
+backup migrate
+use https let use letsencrypt / Cloudflare
