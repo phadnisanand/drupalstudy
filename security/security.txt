@@ -14,3 +14,7 @@ https://www.drupal.org/project/paranoia
 File permissons and ownership scipts need to run
 backup migrate
 use https let use letsencrypt / Cloudflare
+
+https://www.drupal.org/project/issues/session_limit?categories=All
+
+need to apply patch to module
