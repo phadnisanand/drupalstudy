@@ -9,17 +9,8 @@ https://www.drupal.org/project/field_encrypt
 https://www.drupal.org/project/hacked
 https://www.youtube.com/watch?v=XNz3KpNtjUk
 https://www.drupal.org/project/seckit
-https://www.drupal.org/project/paranoia
+https://www.drupal.org/project/login_history
 
 File permissons and ownership scipts need to run
 backup migrate
 use https let use letsencrypt / Cloudflare
-
-
-
-https://www.drupal.org/project/autologout
-
-
-
-https://www.drupal.org/project/login_history -> no need this time.
-https://www.youtube.com/watch?v=RSDZXUk7_k8
