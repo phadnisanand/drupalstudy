@@ -7,10 +7,27 @@ keywords
 https://developer.chrome.com/docs/lighthouse/overview/  (lighthouse)  -> check mobile friendly or not. google mobile friendly retired
 https://www.screamingfrog.co.uk/seo-spider/
 https://portent.com/serp-preview-tool -> preview tool for seo
+
 cannoical tag -> adding in page header. indicating original page url and adding in duplicate pages. cannoical tag points to original page. it is for crawlers.
 
-youtube- https://www.youtube.com/watch?v=CjxQTvq_kRo
+html sitemap
+xml sitemap -> crawlers
+https://www.xml-sitemaps.com/
+https://www.google.com/webmasters/tools
+https://moz.com/
 
+redirection
+301-> moved permanant -> showing crwaler page moved permanant do not index old page
+302 -> temporary move  -> showing crwaler page moved temporary keep orginal page indexed. 
+https://business.google.com/en-all/business-profile/
+https://www.semrush.com/
+SEOquake https://chromewebstore.google.com/detail/seoquake/akdgnmcogleenhbclghghlkkdndkjdjc?hl=en
+https://whois.domaintools.com/screener.in
+https://www.youtube.com/@wscubetech/playlists
+https://answerthepublic.com/
+
+youtube- https://www.youtube.com/watch?v=CjxQTvq_kRo
+https://www.youtube.com/watch?v=CjxQTvq_kRo&t=15456s
 ---------------------------------------------------------------------------------------------------------------
 
 Google tag assistant 
